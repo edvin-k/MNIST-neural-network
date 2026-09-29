@@ -1,3 +1,11 @@
+sigma = 2/784 # Hu initialization 
+W_init = np.random.normal(0,sigma , size=(784,16)) # 784 x 16
+B_init = np.random.normal(0,sigma , size=(1,16)) # 1 x 16 
+V_init = np.random.normal(0,sigma , size=(16,16)) # 16 x 16
+D_init = np.random.normal(0,sigma , size=(1,16)) # 1 x 16
+U_init = np.random.normal(0,sigma , size=(16,10)) # 16 x 10 
+C_init = np.random.normal(0,sigma , size=(1,10)) # 1 x 10 
+
 def gradient_descent_optimizer(train_data, target, lr, max_iter = 5000):
     W,B,V,D,U,C = W_init,B_init,V_init,D_init,U_init,C_init
     y_one_hot = one_hot(target)
