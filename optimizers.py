@@ -1,52 +1,45 @@
-sigma = 2/784 # Hu initialization 
-W_init = np.random.normal(0,sigma , size=(784,16)) # 784 x 16
-B_init = np.random.normal(0,sigma , size=(1,16)) # 1 x 16 
-V_init = np.random.normal(0,sigma , size=(16,16)) # 16 x 16
-D_init = np.random.normal(0,sigma , size=(1,16)) # 1 x 16
-U_init = np.random.normal(0,sigma , size=(16,10)) # 16 x 10 
-C_init = np.random.normal(0,sigma , size=(1,10)) # 1 x 10 
+from functions_toolkit import cross_entropy, one_hot
+import numpy as np
+from model import EdNet
 
-def gradient_descent_optimizer(train_data, target, lr, max_iter = 5000):
-    W,B,V,D,U,C = W_init,B_init,V_init,D_init,U_init,C_init
-    y_one_hot = one_hot(target)
-    avg_risk = []
+# File contains different kind of optimizers for training a neural network from the model.py file. 
+
+def GD_optimizer(model, train_features, train_targets, lr, max_iter = 10):
+    # Gradient descent optimizer (full batch), as input the model from class EdNet is needed!
+    train_targets = one_hot(train_targets, model.output_nodes)
+    train_loss = []
     for iter in range(max_iter):
-        print("Iteration--",iter)
-        dW,dB,dV,dD,dU,dC,fout = backprop(train_data, y_one_hot,W,B,V,D,U,C)
-        avg_risk.append(cross_entropy(fout,train_data, y_one_hot))
-        U = U - lr*dU
-        C = C - lr*dC
-        V = V - lr*dV
-        D = D - lr*dD
-        W = W - lr*dW
-        B = B - lr*dB   
-    return W,B,V,D,U,C,avg_risk
+        print("Iteration -- ", iter)
+        dW, db, z_out = model.backward_pass(train_targets, train_features)
+        for idx in range(len(dW)):
+            model.W[idx] = model.W[idx] - lr * dW[idx]
+            model.b[idx] = model.b[idx] - lr * db[idx]
+        train_loss.append(cross_entropy(z_out[model.hidden_layers + 1], train_targets))
+    return model.W, model.b, train_loss
 
 
-
-def iterate_minibatches(train_data, target, batchsize):
-    indeces = np.arange(train_data.shape[0])
+def iterate_minibatches(train_features, train_targets,num_classes, batchsize):
+    # Minibatches creation function
+    indeces = np.arange(train_features.shape[0])
     np.random.shuffle(indeces)
-    y_one_hot = one_hot(target)
-    for start_idx in range(0, train_data.shape[0], batchsize):
-        end_idx = min(start_idx + batchsize, train_data.shape[0])
+    y_one_hot = one_hot(train_targets,num_classes)
+    for start_idx in range(0, train_features.shape[0], batchsize):
+        end_idx = min(start_idx + batchsize, train_features.shape[0])
         excerpt = indeces[start_idx:end_idx]
-        yield train_data[excerpt], y_one_hot[excerpt]
+        yield train_features[excerpt], y_one_hot[excerpt]
 
 
-def SGD_optimizer(train_data, target, lr, batchsize, epochs = 5000):
-
-    W,B,V,D,U,C = W_init,B_init,V_init,D_init,U_init,C_init
-    avg_risk = []
+def SGD_optimizer(model, train_features, train_targets, lr, batchsize, epochs = 100):
+    # Stochastic Gradient Descent optimizer, as input the model from class EdNet is needed!
+    train_loss = []
     for iter in range(epochs):
         print("Epochs--",iter)
-        for minibatch_X, minibatch_y in iterate_minibatches(train_data, target, batchsize):
-            dW,dB,dV,dD,dU,dC,fout = backprop(minibatch_X,minibatch_y,W,B,V,D,U,C)
-            avg_risk.append(cross_entropy(fout,minibatch_X, minibatch_y))
-            U = U - lr*dU
-            C = C - lr*dC
-            V = V - lr*dV
-            D = D - lr*dD
-            W = W - lr*dW
-            B = B - lr*dB   
-    return W,B,V,D,U,C,avg_risk
+        loss_epoch = 0
+        for minibatch_X, minibatch_y in iterate_minibatches(train_features, train_targets, model.output_nodes, batchsize):
+            dW, db, z_out = model.backward_pass(minibatch_y,minibatch_X)
+            for idx in range(len(dW)):
+                model.W[idx] = model.W[idx] - lr * dW[idx]
+                model.b[idx] = model.b[idx] - lr * db[idx]
+            loss_epoch += cross_entropy(z_out[model.hidden_layers + 1], minibatch_y)
+        train_loss.append(loss_epoch/(train_features.shape[0]/batchsize))
+    return model.W, model.b, train_loss
