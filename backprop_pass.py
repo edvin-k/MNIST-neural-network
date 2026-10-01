@@ -1,3 +1,6 @@
+from feedforward_pass import forward_pass
+from functions_toolkit import reLU_derivative
+import numpy as np
 def backprop(train_data,y_one_hot,W,B,V,D,U,C):
     X,z1in,z1out,z2in,z2out,fin,fout = forward_pass(train_data,W,B,V,D,U,C)
     delta_f = fout - y_one_hot  # 60,000 x 10
